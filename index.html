@@ -64,26 +64,14 @@
       color: white;
       box-sizing: border-box;
       box-shadow: 0 0 0 3px white;
-      appearance: none;
-    }
-
-    input:focus {
-      box-shadow: 0 0 0 3px white;
-    }
-
-    input::placeholder {
-      color: #aaa;
-      opacity: 0.7;
     }
 
     input.correct {
       background-color: #28a745 !important;
-      color: white;
     }
 
     input.incorrect {
       background-color: #dc3545 !important;
-      color: white;
     }
 
     .autocomplete-list {
@@ -120,61 +108,18 @@
       margin-top: 1rem;
     }
 
-    #feedback {
-      margin-top: 2rem;
-      font-size: 1.1rem;
-    }
-
-    #attemptCounter, #midnightCountdown {
-      margin-top: 0.5rem;
+    #feedback, #attemptCounter, #countdown {
+      margin-top: 1.2rem;
       font-size: 1rem;
       color: #ccc;
     }
 
     @media (max-width: 600px) {
-      body {
-        padding: 1rem;
-      }
-
-      h1 {
-        font-size: 2.6rem;
-      }
-
-      #subtitle {
-        font-size: 1rem;
-      }
-
-      #dateToday {
-        font-size: 0.9rem;
-      }
-
-      img#mashImage {
-        width: 90%;
-        max-width: 300px;
-      }
-
-      .input-wrapper {
-        display: block;
-        margin: 0.75rem auto;
-        width: 100%;
-        max-width: 90%;
-      }
-
-      input {
-        width: 100%;
-        font-size: 1rem;
-      }
-
-      button {
-        width: 100%;
-        font-size: 1rem;
-        padding: 1rem;
-      }
-
-      .autocomplete-list {
-        width: 100%;
-        max-width: none;
-      }
+      h1 { font-size: 2.6rem; }
+      #subtitle, #dateToday { font-size: 1rem; }
+      img#mashImage { width: 90%; max-width: 300px; }
+      .input-wrapper, input, button { width: 90%; max-width: 260px; }
+      .autocomplete-list { width: 100%; max-width: none; }
     }
   </style>
 </head>
@@ -187,7 +132,7 @@
     <img id="mashImage" src="" alt="Daily Face Mash" />
   </div>
 
-  <div class="guess-area">
+  <div class="guess-area" id="guessArea">
     <div class="input-wrapper">
       <input type="text" id="guess1" placeholder="Agent 1" autocomplete="off" />
       <div id="autocomplete1" class="autocomplete-list"></div>
@@ -204,37 +149,58 @@
 
   <div id="feedback"></div>
   <div id="attemptCounter"></div>
-  <div id="midnightCountdown"></div>
+  <div id="countdown"></div>
 
   <script>
-    const agentNames = ["Astra", "Breach", "Brimstone", "Chamber", "Clove", "Cypher", "Deadlock",
+    const agentNames = [
+      "Astra", "Breach", "Brimstone", "Chamber", "Clove", "Cypher", "Deadlock",
       "Fade", "Gekko", "Harbor", "Iso", "Jett", "KAY/O", "Killjoy", "Neon",
       "Omen", "Phoenix", "Raze", "Reyna", "Sage", "Skye", "Sova", "Viper",
-      "Yoru", "Vyse", "Tejo", "Waylay"];
+      "Yoru", "Vyse", "Tejo", "Waylay"
+    ];
 
-    const puzzles = [{ image: "images/ValorantMashup.png", answers: ["Breach", "Skye"] }];
+    const puzzles = {
+      "2025-06-20": {
+        image: "images/ValorantMashup.png",
+        answers: ["Breach", "Skye"]
+      },
+      "2025-06-21": {
+        image: "images/tomorrow.png",
+        answers: ["Viper", "Killjoy"]
+      }
+    };
+
     const maxAttempts = 6;
     let attempts = 0;
-    let todayPuzzle;
-    let puzzleDateKey;
+    let todayKey, todayPuzzle;
 
-    function getTodayKey() {
-      const d = new Date();
-      return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+    function formatDate(date) {
+      return date.toISOString().split("T")[0];
     }
 
     function loadTodayPuzzle() {
-      todayPuzzle = puzzles[0];
-      puzzleDateKey = getTodayKey();
+      const today = new Date();
+      todayKey = formatDate(today);
+      todayPuzzle = puzzles[todayKey];
+
+      document.getElementById("dateToday").textContent = today.toLocaleDateString(undefined, {
+        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+      });
+
+      if (!todayPuzzle) {
+        document.getElementById("feedback").innerHTML = "⚠️ No puzzle set for today.";
+        return;
+      }
+
       document.getElementById("mashImage").src = todayPuzzle.image;
 
-      const data = JSON.parse(localStorage.getItem("mashup-" + puzzleDateKey));
-      if (data) {
-        disableInputs();
-        document.getElementById("feedback").textContent = "You've already played today's puzzle. Try again tomorrow.";
-        document.getElementById("attemptCounter").textContent = data.completed
-          ? `You got it in ${data.attempts} guess${data.attempts === 1 ? '' : 'es'}.`
-          : `You did not complete today's mashup. You used ${data.attempts} guess${data.attempts === 1 ? '' : 'es'}.`;
+      const saved = JSON.parse(localStorage.getItem("dailyGuess_" + todayKey));
+      if (saved) {
+        document.getElementById("guessArea").style.display = "none";
+        document.getElementById("feedback").innerHTML = "You've already played today's puzzle. Try again tomorrow.";
+        document.getElementById("attemptCounter").textContent = saved.solved
+          ? `You got it in ${saved.attempts} guess${saved.attempts === 1 ? "" : "es"}.`
+          : `You did not complete today’s mashup. You used ${saved.attempts} guess${saved.attempts === 1 ? "" : "es"}.`;
       }
     }
 
@@ -247,46 +213,40 @@
       const input2 = document.getElementById("guess2");
       const g1 = capitalize(input1.value.trim());
       const g2 = capitalize(input2.value.trim());
-      const feedback = document.getElementById("feedback");
-
-      if (!g1 || !g2) {
-        feedback.textContent = "Please enter both guesses.";
-        return;
-      }
-
-      input1.classList.remove("correct", "incorrect");
-      input2.classList.remove("correct", "incorrect");
 
       const correct = todayPuzzle.answers;
       const guesses = [g1, g2];
       const allCorrect = guesses.every(g => correct.includes(g));
 
+      input1.classList.remove("correct", "incorrect");
+      input2.classList.remove("correct", "incorrect");
       input1.classList.add(correct.includes(g1) ? "correct" : "incorrect");
       input2.classList.add(correct.includes(g2) ? "correct" : "incorrect");
 
       attempts++;
 
-      if (allCorrect || attempts >= maxAttempts) {
-        const completed = allCorrect;
-        localStorage.setItem("mashup-" + puzzleDateKey, JSON.stringify({ completed, attempts }));
-        disableInputs();
-      }
-
       if (allCorrect) {
-        feedback.innerHTML = `✅ Correct! It was <b>${correct[0]}</b> and <b>${correct[1]}</b>.`;
-        document.getElementById("attemptCounter").textContent = `You got it in ${attempts} guess${attempts === 1 ? '' : 'es'}!`;
+        document.getElementById("feedback").innerHTML = `✅ Correct! It was <b>${correct[0]}</b> and <b>${correct[1]}</b>.`;
+        document.getElementById("attemptCounter").textContent = `You got it in ${attempts} guess${attempts === 1 ? "" : "es"}.`;
+        endGame(true);
       } else if (attempts >= maxAttempts) {
-        feedback.innerHTML = `❌ You're out of tries! The correct answer was <b>${correct[0]}</b> and <b>${correct[1]}</b>.`;
-        document.getElementById("attemptCounter").textContent = `You did not complete today's mashup. You used ${attempts} guess${attempts === 1 ? '' : 'es'}.`;
+        document.getElementById("feedback").innerHTML = `❌ Out of tries! It was <b>${correct[0]}</b> and <b>${correct[1]}</b>.`;
+        document.getElementById("attemptCounter").textContent = `You did not complete today’s mashup. You used ${attempts} guess${attempts === 1 ? "" : "es"}.`;
+        endGame(false);
       } else {
-        feedback.textContent = `❌ Incorrect. Attempts left: ${maxAttempts - attempts}`;
+        document.getElementById("feedback").textContent = `❌ Incorrect. Attempts left: ${maxAttempts - attempts}`;
       }
     }
 
-    function disableInputs() {
+    function endGame(solved) {
       document.getElementById("guess1").disabled = true;
       document.getElementById("guess2").disabled = true;
       document.getElementById("submitBtn").disabled = true;
+
+      localStorage.setItem("dailyGuess_" + todayKey, JSON.stringify({
+        solved: solved,
+        attempts: attempts
+      }));
     }
 
     function setupAutocomplete(inputId, listId) {
@@ -297,8 +257,8 @@
       input.addEventListener("input", function () {
         const val = this.value.toLowerCase();
         list.innerHTML = "";
-        currentFocus = -1;
         if (!val) return;
+
         const matches = agentNames.filter(name => name.toLowerCase().startsWith(val));
         matches.forEach(name => {
           const item = document.createElement("div");
@@ -316,69 +276,49 @@
         let items = list.querySelectorAll(".autocomplete-item");
         if (e.key === "ArrowDown") {
           currentFocus = (currentFocus + 1) % items.length;
-          setActive(items);
         } else if (e.key === "ArrowUp") {
           currentFocus = (currentFocus - 1 + items.length) % items.length;
-          setActive(items);
-        } else if (e.key === "Enter") {
-          if (currentFocus > -1 && items[currentFocus]) {
-            e.preventDefault();
-            items[currentFocus].click();
-          }
+        } else if (e.key === "Enter" && currentFocus > -1) {
+          e.preventDefault();
+          items[currentFocus].click();
         }
-      });
 
-      function setActive(items) {
         items.forEach((item, i) => {
           item.classList.toggle("active", i === currentFocus);
         });
-      }
-
-      document.addEventListener("click", function (e) {
-        if (!list.contains(e.target) && e.target !== input) {
-          list.innerHTML = "";
-        }
       });
-    }
 
-    function setDate() {
-      const today = new Date();
-      document.getElementById("dateToday").textContent = today.toLocaleDateString(undefined, {
-        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+      document.addEventListener("click", e => {
+        if (!list.contains(e.target) && e.target !== input) list.innerHTML = "";
       });
     }
 
     function updateCountdown() {
       const now = new Date();
-      const midnight = new Date();
-      midnight.setHours(24, 0, 0, 0);
-      const diff = midnight - now;
-      const hrs = String(Math.floor(diff / 3600000)).padStart(2, '0');
-      const mins = String(Math.floor((diff % 3600000) / 60000)).padStart(2, '0');
-      const secs = String(Math.floor((diff % 60000) / 1000)).padStart(2, '0');
-      document.getElementById("midnightCountdown").textContent = `Next puzzle in: ${hrs}:${mins}:${secs}`;
+      const nextMidnight = new Date();
+      nextMidnight.setHours(24, 0, 0, 0);
+      const ms = nextMidnight - now;
+      const h = Math.floor(ms / 3600000);
+      const m = Math.floor((ms % 3600000) / 60000);
+      const s = Math.floor((ms % 60000) / 1000);
+      document.getElementById("countdown").textContent = `Next puzzle in ${h}h ${m}m ${s}s`;
     }
 
     window.onload = function() {
       loadTodayPuzzle();
       setupAutocomplete("guess1", "autocomplete1");
       setupAutocomplete("guess2", "autocomplete2");
-      setDate();
-      updateCountdown();
-      setInterval(updateCountdown, 1000);
 
-      document.getElementById("guess1").focus();
       ["guess1", "guess2"].forEach(id => {
         document.getElementById(id).addEventListener("keypress", function(e) {
           if (e.key === "Enter") {
-            if (id === "guess1") {
-              document.getElementById("guess2").focus();
-            } else {
-              checkGuess();
-            }
+            if (id === "guess1") document.getElementById("guess2").focus();
+            else checkGuess();
           }
         });
       });
+
+      setInterval(updateCountdown, 1000);
     };
   </script>
 </body>
