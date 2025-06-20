@@ -125,7 +125,7 @@
       font-size: 1.1rem;
     }
 
-    #attemptCounter {
+    #attemptCounter, #midnightCountdown {
       margin-top: 0.5rem;
       font-size: 1rem;
       color: #ccc;
@@ -204,29 +204,38 @@
 
   <div id="feedback"></div>
   <div id="attemptCounter"></div>
+  <div id="midnightCountdown"></div>
 
   <script>
-    const agentNames = [
-      "Astra", "Breach", "Brimstone", "Chamber", "Clove", "Cypher", "Deadlock",
+    const agentNames = ["Astra", "Breach", "Brimstone", "Chamber", "Clove", "Cypher", "Deadlock",
       "Fade", "Gekko", "Harbor", "Iso", "Jett", "KAY/O", "Killjoy", "Neon",
       "Omen", "Phoenix", "Raze", "Reyna", "Sage", "Skye", "Sova", "Viper",
-      "Yoru", "Vyse", "Tejo", "Waylay"
-    ];
+      "Yoru", "Vyse", "Tejo", "Waylay"];
 
-    const puzzles = [
-      {
-        image: "images/ValorantMashup.png",
-        answers: ["Breach", "Skye"]
-      }
-    ];
-
+    const puzzles = [{ image: "images/ValorantMashup.png", answers: ["Breach", "Skye"] }];
     const maxAttempts = 6;
     let attempts = 0;
     let todayPuzzle;
+    let puzzleDateKey;
+
+    function getTodayKey() {
+      const d = new Date();
+      return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+    }
 
     function loadTodayPuzzle() {
       todayPuzzle = puzzles[0];
+      puzzleDateKey = getTodayKey();
       document.getElementById("mashImage").src = todayPuzzle.image;
+
+      const data = JSON.parse(localStorage.getItem("mashup-" + puzzleDateKey));
+      if (data) {
+        disableInputs();
+        document.getElementById("feedback").textContent = "You've already played today's puzzle. Try again tomorrow.";
+        document.getElementById("attemptCounter").textContent = data.completed
+          ? `You got it in ${data.attempts} guess${data.attempts === 1 ? '' : 'es'}.`
+          : `You did not complete today's mashup. You used ${data.attempts} guess${data.attempts === 1 ? '' : 'es'}.`;
+      }
     }
 
     function capitalize(name) {
@@ -257,13 +266,18 @@
 
       attempts++;
 
+      if (allCorrect || attempts >= maxAttempts) {
+        const completed = allCorrect;
+        localStorage.setItem("mashup-" + puzzleDateKey, JSON.stringify({ completed, attempts }));
+        disableInputs();
+      }
+
       if (allCorrect) {
         feedback.innerHTML = `✅ Correct! It was <b>${correct[0]}</b> and <b>${correct[1]}</b>.`;
         document.getElementById("attemptCounter").textContent = `You got it in ${attempts} guess${attempts === 1 ? '' : 'es'}!`;
-        disableInputs();
       } else if (attempts >= maxAttempts) {
         feedback.innerHTML = `❌ You're out of tries! The correct answer was <b>${correct[0]}</b> and <b>${correct[1]}</b>.`;
-        disableInputs();
+        document.getElementById("attemptCounter").textContent = `You did not complete today's mashup. You used ${attempts} guess${attempts === 1 ? '' : 'es'}.`;
       } else {
         feedback.textContent = `❌ Incorrect. Attempts left: ${maxAttempts - attempts}`;
       }
@@ -285,9 +299,7 @@
         list.innerHTML = "";
         currentFocus = -1;
         if (!val) return;
-
         const matches = agentNames.filter(name => name.toLowerCase().startsWith(val));
-
         matches.forEach(name => {
           const item = document.createElement("div");
           item.classList.add("autocomplete-item");
@@ -336,13 +348,26 @@
       });
     }
 
+    function updateCountdown() {
+      const now = new Date();
+      const midnight = new Date();
+      midnight.setHours(24, 0, 0, 0);
+      const diff = midnight - now;
+      const hrs = String(Math.floor(diff / 3600000)).padStart(2, '0');
+      const mins = String(Math.floor((diff % 3600000) / 60000)).padStart(2, '0');
+      const secs = String(Math.floor((diff % 60000) / 1000)).padStart(2, '0');
+      document.getElementById("midnightCountdown").textContent = `Next puzzle in: ${hrs}:${mins}:${secs}`;
+    }
+
     window.onload = function() {
       loadTodayPuzzle();
       setupAutocomplete("guess1", "autocomplete1");
       setupAutocomplete("guess2", "autocomplete2");
       setDate();
-      document.getElementById("guess1").focus();
+      updateCountdown();
+      setInterval(updateCountdown, 1000);
 
+      document.getElementById("guess1").focus();
       ["guess1", "guess2"].forEach(id => {
         document.getElementById(id).addEventListener("keypress", function(e) {
           if (e.key === "Enter") {
