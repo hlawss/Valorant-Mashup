@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Valorant Mashup</title>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
   <style>
     body {
       font-family: 'Segoe UI', sans-serif;
@@ -238,6 +239,12 @@
       attempts++;
 
       if (allCorrect) {
+        confetti({
+          particleCount: 100,
+          spread: 70,
+          origin: { y: 0.6 }
+        });
+
         document.getElementById("feedback").innerHTML = `✅ Correct! It was <b>${correct[0]}</b> and <b>${correct[1]}</b>.`;
         document.getElementById("attemptCounter").textContent = `You got it in ${attempts} guess${attempts === 1 ? "" : "es"}.`;
         saveResult(true);
@@ -363,4 +370,3 @@
   </script>
 </body>
 </html>
-
