@@ -13,47 +13,30 @@
       text-align: center;
       padding: 2rem;
     }
-
     h1 {
       color: #ff4655;
       margin-bottom: 0.3rem;
       font-size: 3.2rem;
       font-weight: 700;
     }
-
     #subtitle {
       margin-top: 0;
       margin-bottom: 0.3rem;
       font-size: 1.1rem;
     }
-
-    #dateToday {
-      margin-bottom: 1.25rem;
-      color: #ccc;
-      font-size: 1rem;
-    }
-
-    #imageContainer {
-      margin-top: 0.5rem;
-    }
-
+    #imageContainer { margin-top: 0.5rem; }
     img#mashImage {
       width: 300px;
       border-radius: 12px;
       margin: 1rem 0;
       box-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
     }
-
-    .guess-area {
-      margin-top: 0.5rem;
-    }
-
+    .guess-area { margin-top: 0.5rem; }
     .input-wrapper {
       position: relative;
       display: inline-block;
       margin: 0.5rem 1rem;
     }
-
     input {
       padding: 0.8rem 1.2rem;
       font-size: 1.1rem;
@@ -66,15 +49,8 @@
       box-sizing: border-box;
       box-shadow: 0 0 0 3px white;
     }
-
-    input.correct {
-      background-color: #28a745 !important;
-    }
-
-    input.incorrect {
-      background-color: #dc3545 !important;
-    }
-
+    input.correct { background-color: #28a745 !important; }
+    input.incorrect { background-color: #dc3545 !important; }
     .autocomplete-list {
       position: absolute;
       background: #1c2a36;
@@ -87,17 +63,14 @@
       z-index: 100;
       box-shadow: 0 4px 6px rgba(0,0,0,0.4);
     }
-
     .autocomplete-item {
       padding: 0.5rem;
       cursor: pointer;
     }
-
     .autocomplete-item.active,
     .autocomplete-item:hover {
       background-color: #2a3a48;
     }
-
     button {
       padding: 1rem 2rem;
       background: #ff4655;
@@ -108,13 +81,11 @@
       cursor: pointer;
       margin-top: 1rem;
     }
-
-    #feedback, #attemptCounter, #countdown {
+    #feedback, #attemptCounter {
       margin-top: 1.2rem;
       font-size: 1rem;
       color: #ccc;
     }
-
     .stats-box {
       background: #131e2a;
       border-radius: 10px;
@@ -122,20 +93,10 @@
       display: inline-block;
       margin-top: 1.5rem;
     }
-
-    .stats-box h3 {
-      margin: 0;
-      font-size: 1.2rem;
-      font-weight: bold;
-    }
-
-    .stats-box p {
-      margin: 0.4rem 0;
-    }
-
+    .stats-box h3 { margin: 0; font-size: 1.2rem; font-weight: bold; }
+    .stats-box p { margin: 0.4rem 0; }
     @media (max-width: 600px) {
       h1 { font-size: 2.6rem; }
-      #subtitle, #dateToday { font-size: 1rem; }
       img#mashImage { width: 90%; max-width: 300px; }
       .input-wrapper, input, button { width: 90%; max-width: 260px; }
       .autocomplete-list { width: 100%; max-width: none; }
@@ -144,32 +105,24 @@
 </head>
 <body>
   <h1>Valorant Mashup</h1>
-  <p id="subtitle">Guess the two Valorant agents in today’s mashup.</p>
-  <p id="dateToday"></p>
-
+  <p id="subtitle">Guess the two Valorant agents in this mashup.</p>
   <div id="imageContainer">
-    <img id="mashImage" src="" alt="Daily Face Mash" />
+    <img id="mashImage" src="" alt="Face Mash" />
   </div>
-
   <div class="guess-area" id="guessArea">
     <div class="input-wrapper">
       <input type="text" id="guess1" placeholder="Agent 1" autocomplete="off" />
       <div id="autocomplete1" class="autocomplete-list"></div>
     </div>
-
     <div class="input-wrapper">
       <input type="text" id="guess2" placeholder="Agent 2" autocomplete="off" />
       <div id="autocomplete2" class="autocomplete-list"></div>
     </div>
-
     <br />
     <button id="submitBtn" onclick="checkGuess()">Submit Guess</button>
   </div>
-
   <div id="feedback"></div>
   <div id="attemptCounter"></div>
-  <div id="countdown"></div>
-
   <div class="stats-box" id="statsBox">
     <h3>Statistics</h3>
     <p id="statPlayed">Played: 0</p>
@@ -179,6 +132,12 @@
   </div>
 
   <script>
+    const mashupKey = "2025-06-21"; // 🔁 Update this whenever you change the puzzle
+    const mashupImage = "images/1.png"; // 🔁 Replace with your actual image
+    const correctAnswers = ["Breach", "Skye"]; // 🔁 Replace with your actual answers
+    const maxAttempts = 6;
+    let attempts = 0;
+
     const agentNames = [
       "Astra", "Breach", "Brimstone", "Chamber", "Clove", "Cypher", "Deadlock",
       "Fade", "Gekko", "Harbor", "Iso", "Jett", "KAY/O", "Killjoy", "Neon",
@@ -186,38 +145,15 @@
       "Yoru", "Vyse", "Tejo", "Waylay"
     ];
 
-    const puzzleData = {
-      "2025-06-20": { image: "images/1.png", answers: ["Breach", "Skye"] },
-      "2025-06-21": { image: "images/2.png", answers: ["Viper", "Killjoy"] },
-      "2025-06-22": { image: "images/3.png", answers: ["Omen", "Yoru"] },
-      "2025-06-23": { image: "images/4.png", answers: ["Jett", "Raze"] },
-    };
-
-    const todayKey = new Date().toISOString().split("T")[0];
-    const todayPuzzle = puzzleData[todayKey];
-    const maxAttempts = 6;
-    let attempts = 0;
-
     function setupPage() {
-      const date = new Date();
-      document.getElementById("dateToday").textContent = date.toLocaleDateString(undefined, {
-        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
-      });
-
-      if (!todayPuzzle) {
-        document.getElementById("feedback").textContent = "No puzzle available today.";
-        return;
-      }
-
-      document.getElementById("mashImage").src = todayPuzzle.image;
-
-      const save = JSON.parse(localStorage.getItem("dailyGuess_" + todayKey));
+      document.getElementById("mashImage").src = mashupImage;
+      const save = JSON.parse(localStorage.getItem("mashupSave_" + mashupKey));
       if (save) {
         document.getElementById("guessArea").style.display = "none";
-        document.getElementById("feedback").textContent = "You've already played today's puzzle.";
+        document.getElementById("feedback").textContent = "You've already played this mashup.";
         document.getElementById("attemptCounter").textContent = save.solved
           ? `You got it in ${save.attempts} guess${save.attempts === 1 ? "" : "es"}.`
-          : `You did not complete today’s mashup. You used ${save.attempts} guess${save.attempts === 1 ? "" : "es"}.`;
+          : `You did not complete the mashup. You used ${save.attempts} guess${save.attempts === 1 ? "" : "es"}.`;
       }
     }
 
@@ -227,31 +163,25 @@
       const g1 = capitalize(input1.value.trim());
       const g2 = capitalize(input2.value.trim());
 
-      const correct = todayPuzzle.answers;
       const guesses = [g1, g2];
-      const allCorrect = guesses.every(g => correct.includes(g));
+      const allCorrect = guesses.every(g => correctAnswers.includes(g));
 
       input1.classList.remove("correct", "incorrect");
       input2.classList.remove("correct", "incorrect");
-      input1.classList.add(correct.includes(g1) ? "correct" : "incorrect");
-      input2.classList.add(correct.includes(g2) ? "correct" : "incorrect");
+      input1.classList.add(correctAnswers.includes(g1) ? "correct" : "incorrect");
+      input2.classList.add(correctAnswers.includes(g2) ? "correct" : "incorrect");
 
       attempts++;
 
       if (allCorrect) {
-        confetti({
-          particleCount: 100,
-          spread: 70,
-          origin: { y: 0.6 }
-        });
-
-        document.getElementById("feedback").innerHTML = `✅ Correct! It was <b>${correct[0]}</b> and <b>${correct[1]}</b>.`;
+        confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+        document.getElementById("feedback").innerHTML = `✅ Correct! It was <b>${correctAnswers[0]}</b> and <b>${correctAnswers[1]}</b>.`;
         document.getElementById("attemptCounter").textContent = `You got it in ${attempts} guess${attempts === 1 ? "" : "es"}.`;
         saveResult(true);
         updateStats(true);
       } else if (attempts >= maxAttempts) {
-        document.getElementById("feedback").innerHTML = `❌ Out of tries! It was <b>${correct[0]}</b> and <b>${correct[1]}</b>.`;
-        document.getElementById("attemptCounter").textContent = `You did not complete today’s mashup. You used ${attempts} guesses.`;
+        document.getElementById("feedback").innerHTML = `❌ Out of tries! It was <b>${correctAnswers[0]}</b> and <b>${correctAnswers[1]}</b>.`;
+        document.getElementById("attemptCounter").textContent = `You used ${attempts} guesses.`;
         saveResult(false);
         updateStats(false);
       } else {
@@ -260,7 +190,7 @@
     }
 
     function saveResult(solved) {
-      localStorage.setItem("dailyGuess_" + todayKey, JSON.stringify({ solved, attempts }));
+      localStorage.setItem("mashupSave_" + mashupKey, JSON.stringify({ solved, attempts }));
       document.getElementById("guess1").disabled = true;
       document.getElementById("guess2").disabled = true;
       document.getElementById("submitBtn").disabled = true;
@@ -309,25 +239,12 @@
       });
     }
 
-    function updateCountdown() {
-      const now = new Date();
-      const next = new Date();
-      next.setHours(24, 0, 0, 0);
-      const ms = next - now;
-      const h = Math.floor(ms / 3600000);
-      const m = Math.floor((ms % 3600000) / 60000);
-      const s = Math.floor((ms % 60000) / 1000);
-      document.getElementById("countdown").textContent = `Next puzzle in ${h}h ${m}m ${s}s`;
-    }
-
     function updateStats(winToday) {
       const stats = JSON.parse(localStorage.getItem("mashupStats")) || {
-        played: 0, wins: 0, streak: 0, maxStreak: 0, lastPlayed: ""
+        played: 0, wins: 0, streak: 0, maxStreak: 0
       };
-      if (stats.lastPlayed === todayKey) return;
 
       stats.played += 1;
-      stats.lastPlayed = todayKey;
       if (winToday) {
         stats.wins += 1;
         stats.streak += 1;
@@ -364,8 +281,6 @@
           }
         });
       });
-
-      setInterval(updateCountdown, 1000);
     };
   </script>
 </body>
