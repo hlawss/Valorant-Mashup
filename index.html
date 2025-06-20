@@ -32,10 +32,6 @@
       font-size: 1rem;
     }
 
-    #imageContainer {
-      margin-top: 0.5rem;
-    }
-
     img#mashImage {
       width: 300px;
       border-radius: 12px;
@@ -114,6 +110,29 @@
       color: #ccc;
     }
 
+    #statsBox {
+      margin-top: 2rem;
+    }
+
+    #statsBox div {
+      background-color: #1c2a36;
+      padding: 1rem;
+      border-radius: 12px;
+      width: 200px;
+      margin: 0 auto;
+      box-shadow: 0 0 10px rgba(255,255,255,0.1);
+    }
+
+    #statsBox h3 {
+      margin-bottom: 0.5rem;
+      color: white;
+    }
+
+    #statsBox p {
+      margin: 0.25rem 0;
+      color: #ccc;
+    }
+
     @media (max-width: 600px) {
       h1 { font-size: 2.6rem; }
       #subtitle, #dateToday { font-size: 1rem; }
@@ -137,12 +156,10 @@
       <input type="text" id="guess1" placeholder="Agent 1" autocomplete="off" />
       <div id="autocomplete1" class="autocomplete-list"></div>
     </div>
-
     <div class="input-wrapper">
       <input type="text" id="guess2" placeholder="Agent 2" autocomplete="off" />
       <div id="autocomplete2" class="autocomplete-list"></div>
     </div>
-
     <br />
     <button id="submitBtn" onclick="checkGuess()">Submit Guess</button>
   </div>
@@ -150,6 +167,16 @@
   <div id="feedback"></div>
   <div id="attemptCounter"></div>
   <div id="countdown"></div>
+
+  <div id="statsBox">
+    <div>
+      <h3>Statistics</h3>
+      <p id="statPlayed">Played: 0</p>
+      <p id="statWin">Win %: 0</p>
+      <p id="statCurrent">Current Streak: 0</p>
+      <p id="statMax">Max Streak: 0</p>
+    </div>
+  </div>
 
   <script>
     const agentNames = [
@@ -160,19 +187,12 @@
     ];
 
     const puzzles = {
-      "2025-06-20": {
-        image: "images/ValorantMashup.png",
-        answers: ["Breach", "Skye"]
-      },
-      "2025-06-21": {
-        image: "images/tomorrow.png",
-        answers: ["Viper", "Killjoy"]
-      }
+      "2025-06-20": { image: "images/ValorantMashup.png", answers: ["Breach", "Skye"] },
+      "2025-06-21": { image: "images/tomorrow.png", answers: ["Viper", "Killjoy"] }
     };
 
     const maxAttempts = 6;
-    let attempts = 0;
-    let todayKey, todayPuzzle;
+    let attempts = 0, todayKey, todayPuzzle;
 
     function formatDate(date) {
       return date.toISOString().split("T")[0];
@@ -243,10 +263,35 @@
       document.getElementById("guess2").disabled = true;
       document.getElementById("submitBtn").disabled = true;
 
-      localStorage.setItem("dailyGuess_" + todayKey, JSON.stringify({
-        solved: solved,
-        attempts: attempts
-      }));
+      localStorage.setItem("dailyGuess_" + todayKey, JSON.stringify({ solved: solved, attempts: attempts }));
+
+      const stats = JSON.parse(localStorage.getItem("valorantStats")) || {
+        played: 0, wins: 0, currentStreak: 0, maxStreak: 0
+      };
+
+      stats.played++;
+      if (solved) {
+        stats.wins++;
+        stats.currentStreak++;
+        stats.maxStreak = Math.max(stats.maxStreak, stats.currentStreak);
+      } else {
+        stats.currentStreak = 0;
+      }
+
+      localStorage.setItem("valorantStats", JSON.stringify(stats));
+      loadStats();
+    }
+
+    function loadStats() {
+      const stats = JSON.parse(localStorage.getItem("valorantStats")) || {
+        played: 0, wins: 0, currentStreak: 0, maxStreak: 0
+      };
+
+      document.getElementById("statPlayed").textContent = `Played: ${stats.played}`;
+      const winPct = stats.played ? Math.round((stats.wins / stats.played) * 100) : 0;
+      document.getElementById("statWin").textContent = `Win %: ${winPct}`;
+      document.getElementById("statCurrent").textContent = `Current Streak: ${stats.currentStreak}`;
+      document.getElementById("statMax").textContent = `Max Streak: ${stats.maxStreak}`;
     }
 
     function setupAutocomplete(inputId, listId) {
@@ -258,7 +303,6 @@
         const val = this.value.toLowerCase();
         list.innerHTML = "";
         if (!val) return;
-
         const matches = agentNames.filter(name => name.toLowerCase().startsWith(val));
         matches.forEach(name => {
           const item = document.createElement("div");
@@ -274,18 +318,14 @@
 
       input.addEventListener("keydown", function(e) {
         let items = list.querySelectorAll(".autocomplete-item");
-        if (e.key === "ArrowDown") {
-          currentFocus = (currentFocus + 1) % items.length;
-        } else if (e.key === "ArrowUp") {
-          currentFocus = (currentFocus - 1 + items.length) % items.length;
-        } else if (e.key === "Enter" && currentFocus > -1) {
+        if (e.key === "ArrowDown") currentFocus = (currentFocus + 1) % items.length;
+        else if (e.key === "ArrowUp") currentFocus = (currentFocus - 1 + items.length) % items.length;
+        else if (e.key === "Enter" && currentFocus > -1) {
           e.preventDefault();
           items[currentFocus].click();
         }
 
-        items.forEach((item, i) => {
-          item.classList.toggle("active", i === currentFocus);
-        });
+        items.forEach((item, i) => item.classList.toggle("active", i === currentFocus));
       });
 
       document.addEventListener("click", e => {
@@ -308,6 +348,7 @@
       loadTodayPuzzle();
       setupAutocomplete("guess1", "autocomplete1");
       setupAutocomplete("guess2", "autocomplete2");
+      loadStats();
 
       ["guess1", "guess2"].forEach(id => {
         document.getElementById(id).addEventListener("keypress", function(e) {
