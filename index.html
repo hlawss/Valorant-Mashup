@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Valorant Mashup</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #0f1923;
+      color: white;
+      text-align: center;
+      padding: 2rem;
+    }
+
+    h1 {
+      color: #ff4655;
+      margin-bottom: 0.3rem;
+      font-size: 3.2rem;
+      font-weight: 700;
+    }
+
+    #subtitle {
+      margin-top: 0;
+      margin-bottom: 0.3rem;
+      font-size: 1.1rem;
+    }
+
+    #dateToday {
+      margin-bottom: 1.25rem;
+      color: #ccc;
+      font-size: 1rem;
+    }
+
+    #imageContainer {
+      margin-top: 0.5rem;
+    }
+
+    img#mashImage {
+      width: 300px;
+      border-radius: 12px;
+      margin: 1rem 0;
+      box-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+    }
+
+    .guess-area {
+      margin-top: 0.5rem;
+    }
+
+    .input-wrapper {
+      position: relative;
+      display: inline-block;
+      margin: 0.5rem 1rem;
+    }
+
+    input {
+      padding: 0.8rem 1.2rem;
+      font-size: 1.1rem;
+      border-radius: 10px;
+      border: none;
+      outline: none;
+      width: 260px;
+      background-color: #1c2a36;
+      color: white;
+      box-sizing: border-box;
+      box-shadow: 0 0 0 3px white;
+      appearance: none;
+    }
+
+    input:focus {
+      box-shadow: 0 0 0 3px white;
+    }
+
+    input::placeholder {
+      color: #aaa;
+      opacity: 0.7;
+    }
+
+    input.correct {
+      background-color: #28a745 !important;
+      color: white;
+    }
+
+    input.incorrect {
+      background-color: #dc3545 !important;
+      color: white;
+    }
+
+    .autocomplete-list {
+      position: absolute;
+      background: #1c2a36;
+      color: white;
+      border: 1px solid white;
+      border-radius: 5px;
+      width: 260px;
+      max-height: 150px;
+      overflow-y: auto;
+      z-index: 100;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.4);
+    }
+
+    .autocomplete-item {
+      padding: 0.5rem;
+      cursor: pointer;
+    }
+
+    .autocomplete-item.active,
+    .autocomplete-item:hover {
+      background-color: #2a3a48;
+    }
+
+    button {
+      padding: 1rem 2rem;
+      background: #ff4655;
+      color: white;
+      font-size: 1.1rem;
+      border: none;
+      border-radius: 7px;
+      cursor: pointer;
+      margin-top: 1rem;
+    }
+
+    #feedback {
+      margin-top: 2rem;
+      font-size: 1.1rem;
+    }
+
+    #attemptCounter {
+      margin-top: 0.5rem;
+      font-size: 1rem;
+      color: #ccc;
+    }
+
+    @media (max-width: 600px) {
+      body {
+        padding: 1rem;
+      }
+
+      h1 {
+        font-size: 2.6rem;
+      }
+
+      #subtitle {
+        font-size: 1rem;
+      }
+
+      #dateToday {
+        font-size: 0.9rem;
+      }
+
+      img#mashImage {
+        width: 90%;
+        max-width: 300px;
+      }
+
+      .input-wrapper {
+        display: block;
+        margin: 0.75rem auto;
+        width: 100%;
+        max-width: 90%;
+      }
+
+      input {
+        width: 100%;
+        font-size: 1rem;
+      }
+
+      button {
+        width: 100%;
+        font-size: 1rem;
+        padding: 1rem;
+      }
+
+      .autocomplete-list {
+        width: 100%;
+        max-width: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1>Valorant Mashup</h1>
+  <p id="subtitle">Guess the two Valorant agents in today’s mashup.</p>
+  <p id="dateToday"></p>
+
+  <div id="imageContainer">
+    <img id="mashImage" src="" alt="Daily Face Mash" />
+  </div>
+
+  <div class="guess-area">
+    <div class="input-wrapper">
+      <input type="text" id="guess1" placeholder="Agent 1" autocomplete="off" />
+      <div id="autocomplete1" class="autocomplete-list"></div>
+    </div>
+
+    <div class="input-wrapper">
+      <input type="text" id="guess2" placeholder="Agent 2" autocomplete="off" />
+      <div id="autocomplete2" class="autocomplete-list"></div>
+    </div>
+
+    <br />
+    <button id="submitBtn" onclick="checkGuess()">Submit Guess</button>
+  </div>
+
+  <div id="feedback"></div>
+  <div id="attemptCounter"></div>
+
+  <script>
+    const agentNames = [
+      "Astra", "Breach", "Brimstone", "Chamber", "Clove", "Cypher", "Deadlock",
+      "Fade", "Gekko", "Harbor", "Iso", "Jett", "KAY/O", "Killjoy", "Neon",
+      "Omen", "Phoenix", "Raze", "Reyna", "Sage", "Skye", "Sova", "Viper",
+      "Yoru", "Vyse", "Tejo", "Waylay"
+    ];
+
+    const puzzles = [
+      {
+        image: "images/ValorantMashup.png",
+        answers: ["Breach", "Skye"]
+      }
+    ];
+
+    const maxAttempts = 6;
+    let attempts = 0;
+    let todayPuzzle;
+
+    function loadTodayPuzzle() {
+      todayPuzzle = puzzles[0];
+      document.getElementById("mashImage").src = todayPuzzle.image;
+    }
+
+    function capitalize(name) {
+      return name ? name[0].toUpperCase() + name.slice(1).toLowerCase() : "";
+    }
+
+    function checkGuess() {
+      const input1 = document.getElementById("guess1");
+      const input2 = document.getElementById("guess2");
+      const g1 = capitalize(input1.value.trim());
+      const g2 = capitalize(input2.value.trim());
+      const feedback = document.getElementById("feedback");
+
+      if (!g1 || !g2) {
+        feedback.textContent = "Please enter both guesses.";
+        return;
+      }
+
+      input1.classList.remove("correct", "incorrect");
+      input2.classList.remove("correct", "incorrect");
+
+      const correct = todayPuzzle.answers;
+      const guesses = [g1, g2];
+      const allCorrect = guesses.every(g => correct.includes(g));
+
+      input1.classList.add(correct.includes(g1) ? "correct" : "incorrect");
+      input2.classList.add(correct.includes(g2) ? "correct" : "incorrect");
+
+      attempts++;
+
+      if (allCorrect) {
+        feedback.innerHTML = `✅ Correct! It was <b>${correct[0]}</b> and <b>${correct[1]}</b>.`;
+        document.getElementById("attemptCounter").textContent = `You got it in ${attempts} guess${attempts === 1 ? '' : 'es'}!`;
+        disableInputs();
+      } else if (attempts >= maxAttempts) {
+        feedback.innerHTML = `❌ You're out of tries! The correct answer was <b>${correct[0]}</b> and <b>${correct[1]}</b>.`;
+        disableInputs();
+      } else {
+        feedback.textContent = `❌ Incorrect. Attempts left: ${maxAttempts - attempts}`;
+      }
+    }
+
+    function disableInputs() {
+      document.getElementById("guess1").disabled = true;
+      document.getElementById("guess2").disabled = true;
+      document.getElementById("submitBtn").disabled = true;
+    }
+
+    function setupAutocomplete(inputId, listId) {
+      const input = document.getElementById(inputId);
+      const list = document.getElementById(listId);
+      let currentFocus = -1;
+
+      input.addEventListener("input", function () {
+        const val = this.value.toLowerCase();
+        list.innerHTML = "";
+        currentFocus = -1;
+        if (!val) return;
+
+        const matches = agentNames.filter(name => name.toLowerCase().startsWith(val));
+
+        matches.forEach(name => {
+          const item = document.createElement("div");
+          item.classList.add("autocomplete-item");
+          item.textContent = name;
+          item.onclick = () => {
+            input.value = name;
+            list.innerHTML = "";
+          };
+          list.appendChild(item);
+        });
+      });
+
+      input.addEventListener("keydown", function(e) {
+        let items = list.querySelectorAll(".autocomplete-item");
+        if (e.key === "ArrowDown") {
+          currentFocus = (currentFocus + 1) % items.length;
+          setActive(items);
+        } else if (e.key === "ArrowUp") {
+          currentFocus = (currentFocus - 1 + items.length) % items.length;
+          setActive(items);
+        } else if (e.key === "Enter") {
+          if (currentFocus > -1 && items[currentFocus]) {
+            e.preventDefault();
+            items[currentFocus].click();
+          }
+        }
+      });
+
+      function setActive(items) {
+        items.forEach((item, i) => {
+          item.classList.toggle("active", i === currentFocus);
+        });
+      }
+
+      document.addEventListener("click", function (e) {
+        if (!list.contains(e.target) && e.target !== input) {
+          list.innerHTML = "";
+        }
+      });
+    }
+
+    function setDate() {
+      const today = new Date();
+      document.getElementById("dateToday").textContent = today.toLocaleDateString(undefined, {
+        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+      });
+    }
+
+    window.onload = function() {
+      loadTodayPuzzle();
+      setupAutocomplete("guess1", "autocomplete1");
+      setupAutocomplete("guess2", "autocomplete2");
+      setDate();
+      document.getElementById("guess1").focus();
+
+      ["guess1", "guess2"].forEach(id => {
+        document.getElementById(id).addEventListener("keypress", function(e) {
+          if (e.key === "Enter") {
+            if (id === "guess1") {
+              document.getElementById("guess2").focus();
+            } else {
+              checkGuess();
+            }
+          }
+        });
+      });
+    };
+  </script>
+</body>
+</html>
